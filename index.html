@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Document</title>
+
+</head>
+
+<body class="h-full bg-gray-100">
+    <div id="app">
+        <div class="grid place-items-center">
+            <div class="lg:col-span-4 md:col-span-3 bg-gray-100 mx-4">
+                <div class="grid lg:grid-cols-3 sm:grid-cols-1 md:grid-cols-1 ">
+                    <div class="lg:col-span-2 sm:col-span-1 h-auto p-4 mt-5 ">
+                        <div class="bg-white p-4 rounded-xl">
+                            <div class="grid lg:grid-cols-4 gap-10">
+                                <input type="text" v-model="searchQuery" class="bg-gray-100 p-1 rounded lg:col-span-3 mb-3 w-full h-full" placeholder="search by name,email,phone">
+                              
+                            </div>
+                            <div class="overflow-auto">
+
+                                <table class="" v-show="unPresentPaginate.length>0">
+                                    <tr>
+                                        <th>No.</th>
+                                        <th>Fullname</th>
+                                        <th>Gender</th>
+                                        <th>Email</th>
+                                        <th>Phone</th>
+                                        <th>Occupation</th>
+                                        <th>Organization</th>
+                                        <th>Attendance</th>
+                                        <th>T shirt</th>
+                                    </tr>
+
+                                    <tr v-for="participant in unPresentPaginate" :key="participant.id">
+                                        <td class="mx-1">{{ participant.id}}</td>
+                                        <td>{{ participant.name }}</td>
+                                        <td>{{ participant.gender }}</td>
+                                        <td>{{ participant.email }}</td>
+                                        <td>{{ participant.phone }}</td>
+                                        <td>{{ participant.occupation }}</td>
+                                        <td>{{ participant.organization }}</td>
+                                        <td>
+                                            <button v-model="open"
+                                                class="button bg-blue-400 hover:bg-blue-500 text-white p-2 rounded text-white"
+                                                @click="updateAttendance(participant.id)">
+                                                Present
+                                            </button>
+                                            <div v-if="open"
+                                                class="fixed inset-0 flex items-center justify-center overflow-y-auto bg-gray-200 bg-opacity-75">
+                                                <div
+                                                    class="relative bg-white rounded-lg text-left overflow-hidden shadow-md w-80">
+                                                    <div class="px-6 py-4 grid place-item-center">
+                                                        <img src="https://t3.ftcdn.net/jpg/04/30/38/40/360_F_430384041_1G6UymaKYOJBE7wx5QmSHBeTJInkcQJT.jpg"
+                                                            alt="" class="w-32 h-32 m-auto">
+                                                        <p class="text-gray-700 text-base text-center">Size
+                                                            {{participant.shirt}} currently out of stock</p>
+                                                    </div>
+                                                    <div class="px-6 py-4 bg-gray-100 text-right">
+                                                        <button @click="open = false"
+                                                            class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                                                            Close
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <button
+                                                class="button bg-green-400 py-2 px-3 rounded text-white text-center w-full">
+
+                                                <select class="bg-green-400" v-model="participant.shirt">
+                                                    <option v-for="shirt in shirts" :key="shirt.id"
+                                                        class="bg-green-400 text-white py-2 px-4 focus:bg-green-500">
+                                                        {{ shirt.size }}
+                                                    </option>
+                                                </select>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                            </div>
+                            <div class="flex justify-around" v-if="totalPages>1">
+                                <button @click="prevPage" :disabled="currentPage === 1">Back</button>
+                                <div>
+                                    <button v-for="page in totalPages" :key="page" @click="gotoPage(page)" class="mx-2">
+                                        {{ page }}
+                                    </button>
+                                </div>
+                                <!-- <button @click="nextPage" :disabled="currentPage === totalPages">Next</button> -->
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class=" p-4 mt-5">
+                        <div class="participant-attendance rounded-2xl h-auto bg-white  p-4">
+                            <div class="flex justify-between">
+                                <span>Present Participant</span>
+
+                                <span class="py-1 px-3  bg-yellow-400 text-white rounded h-38">{{
+                                    totalPresentParticipant}}</span>
+                            </div>
+                            <div class="mt-2">
+                                <input type="text" placeholder="search user" class="bg-gray-100 p-2 rounded w-full"
+                                    v-model="searchPresentQuery" @input="filterParticipants">
+
+                            </div>
+                            <div class="grid lg:grid-cols-1 md:grid-cols-2 gap-4 mt-3" v-model="currentPage">
+                                <div v-for="participant in paginatedParticipants">
+                                    <div class="shadow-sm border py-2 border-gray-100 flex justify-between rounded-xl"
+                                        :key="participant.id">
+                                        <div class="flex ">
+                                            <img class="w-10 h-10 mx-3"
+                                                src="data:image/png;base64,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"
+                                                alt="">
+                                            <span class="py-2 px-1 flex justify-center">{{ participant.name }}</span> </div>
+
+                                            <div class="grid place-items-center">
+                                                <span class="px-4 hover:cursor-pointer hover:text-yellow-400"
+                                                    v-model="view" @click="viewParticipant(participant.id)"
+                                                    >View</span>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-between" v-if="totalPresentParticipantPage>1">
+                                        <button @click="prevPage1" :disabled="currentPagePresent === 1">Back</button>
+                                        <div>
+                                            <!-- Always show the first page button -->
+                                            <button @click="gotoPage1(1)" class="mx-2"
+                                                v-if="currentPagePresent !== 1">1</button>
+
+                                            <!-- Show '...' if currentPage is beyond page 3 -->
+                                            <span v-if="currentPagePresent > 3 && totalPresentParticipantPage > 5"> ...
+                                            </span>
+
+                                            <!-- Show previous page button if currentPage is greater than 2 -->
+                                            <button v-if="currentPagePresent > 2"
+                                                @click="gotoPage1(currentPagePresent - 1)" class="mx-2">
+                                                {{ currentPagePresent - 1 }}
+                                            </button>
+
+                                            <!-- Show current page button -->
+                                            <button class="mx-2" @click="gotoPage1(currentPagePresent)">{{
+                                                currentPagePresent }}</button>
+
+                                            <!-- Show next page button if currentPage is less than the total pages -->
+                                            <button v-if="currentPagePresent < totalPresentParticipantPage"
+                                                @click="gotoPage1(currentPagePresent + 1)" class="mx-2">
+                                                {{ currentPagePresent + 1 }}
+                                            </button>
+
+                                            <!-- Show '...' if currentPage is not near the last two pages -->
+                                            <span
+                                                v-if="currentPagePresent < totalPresentParticipantPage - 2 && totalPresentParticipantPage > 5">
+                                                ... </span>
+
+                                            <!-- Always show the last page button -->
+                                            <button @click="gotoPage1(totalPresentParticipantPage)" class="mx-2"
+                                                v-if="currentPagePresent !== totalPresentParticipantPage && totalPresentParticipantPage > 1">{{
+                                                totalPresentParticipantPage }}</button>
+
+                                        </div>
+                                        <button @click="nextPage1"
+                                            :disabled="currentPagePresent === totalPresentParticipantPage">Next</button>
+                                    </div>
+                                </div>
+                          
+                            </div>
+
+                            <!-- // <button @click="open = true">Open Modal</button> -->
+                            <!--Tshirt -->
+                       
+                            <participant-modal :view="view" :participant="viewedParticipant" @close-view="closeView"></participant-modal>
+                            <app-tshirt :shirts="shirts" :total="totalTshirt"></app-tshirt>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <script type="module">
+            import Tshirt from './js/components/Tshirt.js';
+          
+            import TshirtModal from './js/components/TshirtModal.js';
+            import ParticipantModal from './js/components/participantModal.js';
+            import Participants from './js/components/presentParticipant.js';
+            const app = {
+
+                components: {
+                    'app-tshirt': Tshirt,
+                    'app-modal': TshirtModal,
+                    'participant-modal':ParticipantModal,
+                    'participants':Participants
+                },
+                data() {
+                    return {
+                        open: false,
+                        view: false,
+                        searchPresentQuery: '',
+                        searchQuery: '',
+                        totalPages: '',
+                        totalPresentParticipantPage: '',
+                        perPage: 3,
+                        currentPagePresent: 1,
+                        currentPage: 1,
+                        viewedParticipant:'',
+
+                        participants: [
+                            { 'id': 1, 'email': 'user1@gmail.com', 'phone': '1234567', 'name': 'user1', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': true, 'collectedshirt': false },
+                            { 'id': 2, 'email': 'user2@gmail.com', 'phone': '1234567', 'name': 'user2', 'gender': 'Female', 'occupation': 'Software Engineer', 'organization': 'RUPP', 'sector': 'Education', 'shirt': 'M', 'present': true, 'collectedshirt': false },
+                            { 'id': 3, 'email': 'user3@gmail.com', 'phone': '1234567', 'name': 'user3', 'gender': 'Female', 'occupation': 'Backend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 4, 'email': 'user4@gmail.com', 'phone': '1234567', 'name': 'user4', 'gender': 'Male', 'occupation': 'Frontend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 5, 'email': 'user5@gmail.com', 'phone': '1234567', 'name': 'user5', 'gender': 'Male', 'occupation': 'Backend Developer', 'organization': 'AUPP', 'sector': 'Education', 'shirt': 'M', 'present': true, 'collectedshirt': false },
+                            { 'id': 6, 'email': 'user6@gmail.com', 'phone': '1234567', 'name': 'user6', 'gender': 'Female', 'occupation': 'Teacher', 'organization': 'CamTech', 'sector': 'Education', 'shirt': 'L', 'present': false, 'collectedshirt': false },
+                            { 'id': 7, 'email': 'user7@gmail.com', 'phone': '1234567', 'name': 'user7', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 8, 'email': 'user8@gmail.com', 'phone': '1234567', 'name': 'user8', 'gender': 'Female', 'occupation': 'Software Engineer', 'organization': 'RUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 9, 'email': 'user9@gmail.com', 'phone': '1234567', 'name': 'user9', 'gender': 'Female', 'occupation': 'Backend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 10, 'email': 'user10@gmail.com', 'phone': '1234567', 'name': 'user10', 'gender': 'Male', 'occupation': 'Frontend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 11, 'email': 'user11@gmail.com', 'phone': '1234567', 'name': 'user11', 'gender': 'Male', 'occupation': 'Backend Developer', 'organization': 'AUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 12, 'email': 'user12@gmail.com', 'phone': '1234567', 'name': 'user12', 'gender': 'Female', 'occupation': 'Teacher', 'organization': 'CamTech', 'sector': 'Education', 'shirt': 'L', 'present': false, 'collectedshirt': false },
+                            { 'id': 13, 'email': 'user13@gmail.com', 'phone': '1234567', 'name': 'user13', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 14, 'email': 'user14@gmail.com', 'phone': '1234567', 'name': 'user14', 'gender': 'Female', 'occupation': 'Software Engineer', 'organization': 'RUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 15, 'email': 'user15@gmail.com', 'phone': '1234567', 'name': 'user15', 'gender': 'Female', 'occupation': 'Backend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 16, 'email': 'user16@gmail.com', 'phone': '1234567', 'name': 'user16', 'gender': 'Male', 'occupation': 'Frontend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 17, 'email': 'user17@gmail.com', 'phone': '1234567', 'name': 'user17', 'gender': 'Male', 'occupation': 'Backend Developer', 'organization': 'AUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 18, 'email': 'user18@gmail.com', 'phone': '1234567', 'name': 'user18', 'gender': 'Female', 'occupation': 'Teacher', 'organization': 'CamTech', 'sector': 'Education', 'shirt': 'L', 'present': false, 'collectedshirt': false },
+                            { 'id': 19, 'email': 'user19@gmail.com', 'phone': '1234567', 'name': 'user19', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 20, 'email': 'user20@gmail.com', 'phone': '1234567', 'name': 'user20', 'gender': 'Female', 'occupation': 'Software Engineer', 'organization': 'RUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 21, 'email': 'user21@gmail.com', 'phone': '1234567', 'name': 'user21', 'gender': 'Male', 'occupation': 'Frontend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 22, 'email': 'user22@gmail.com', 'phone': '1234567', 'name': 'user22', 'gender': 'Female', 'occupation': 'Backend Developer', 'organization': 'AUPP', 'sector': 'Education', 'shirt': 'L', 'present': false, 'collectedshirt': false },
+                            { 'id': 23, 'email': 'user23@gmail.com', 'phone': '1234567', 'name': 'user23', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'CamTech', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 24, 'email': 'user24@gmail.com', 'phone': '1234567', 'name': 'user24', 'gender': 'Female', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 25, 'email': 'user25@gmail.com', 'phone': '1234567', 'name': 'user25', 'gender': 'Male', 'occupation': 'Software Engineer', 'organization': 'RUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 26, 'email': 'user26@gmail.com', 'phone': '1234567', 'name': 'user26', 'gender': 'Female', 'occupation': 'Backend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 27, 'email': 'user27@gmail.com', 'phone': '1234567', 'name': 'user27', 'gender': 'Male', 'occupation': 'Frontend Developer', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 28, 'email': 'user28@gmail.com', 'phone': '1234567', 'name': 'user28', 'gender': 'Male', 'occupation': 'Backend Developer', 'organization': 'AUPP', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false },
+                            { 'id': 29, 'email': 'user29@gmail.com', 'phone': '1234567', 'name': 'user29', 'gender': 'Female', 'occupation': 'Teacher', 'organization': 'CamTech', 'sector': 'Education', 'shirt': 'L', 'present': false, 'collectedshirt': false },
+                            { 'id': 30, 'email': 'user30@gmail.com', 'phone': '1234567', 'name': 'user30', 'gender': 'Male', 'occupation': 'Teacher', 'organization': 'Paragon', 'sector': 'Education', 'shirt': 'M', 'present': false, 'collectedshirt': false }
+                        ],
+                        shirts: [
+                            { 'size': 'M', 'quantity': 10, 'id': 1 },
+                            { 'size': 'S', 'quantity': 10, 'id': 2 },
+                            { 'size': 'L', 'quantity': 10, 'id': 3 },
+                            { 'size': 'XL', 'quantity': 10, 'id': 4 },
+                            { 'size': 'XXL', 'quantity': 10, 'id': 5 }
+                        ],
+                        sidebar: [
+                            { 'title': 'Dashboard', 'id': 1, 'active': true },
+                            { 'title': 'Participant', 'id': 2, 'active': false },
+                            { 'title': 'Report', 'id': 3, 'active': false }
+                        ],
+
+                    }
+                },
+                methods: {
+                    closeView(){
+                        this.view=false
+                    },
+                    viewParticipant(id) {
+                        this.view = !this.view; // Toggle view state
+                        this.participants.forEach(participant=>{
+                            if(participant.id ==id){
+                                this.viewedParticipant=participant;
+                            }
+                        })
+                    },
+                    filterParticipants() {
+                        this.currentPagePresent = 1; // Reset to first page when search text changes
+                    },
+                    clickMenu(id) {
+                        this.sidebar.forEach(item => {
+                            item.active = item.id === id;
+                        });
+                    },
+                    getMenuClass(isActive) {
+                        return isActive
+                            ? 'p-2 rounded-xl shadow-sm flex justify-between content-center mb-2 bg-blue-500 text-white cursor-pointer'
+                            : 'p-2 rounded-xl flex justify-between content-center mb-2 cursor-pointer';
+                    },
+
+
+                    updateAttendance(id) {
+                        let item = '';
+                        let tshirt = '';
+
+                        this.participants.forEach(participant => {
+                            if (participant.id === id) {
+                                let shirtFound = false;
+                                this.shirts.forEach(shirt => {
+                                    if (shirt.size === participant.shirt) {
+                                        if (shirt.quantity > 0) {
+                                            shirtFound = true;
+                                            participant.present = true;
+                                            participant.shirt = shirt;
+                                            shirt.quantity--; // Decrement the quantity to reflect the allocation
+                                        }
+                                    }
+                                });
+                                if (!shirtFound) {
+                                    // alert("Sorry,That size is currently out of stock");
+                                    this.open = true;
+                                }
+                            }
+                        });
+                    },
+                    nextPage() {
+                        if (this.currentPage < this.totalPages) {
+                            this.currentPage++;
+                        }
+
+                    },
+                    prevPage() {
+                        if (this.currentPage > 1) {
+                            this.currentPage--;
+                        }
+
+                    },
+                    gotoPage(page) {
+                        this.currentPage = page;
+                    },
+                    nextPage1() {
+                        if (this.currentPagePresent < this.totalPresentParticipantPage) {
+                            this.currentPagePresent++;
+                        }
+
+                    },
+                    prevPage1() {
+                        if (this.currentPagePresent > 1) {
+                            this.currentPagePresent--;
+                        }
+
+                    },
+                    gotoPage1(page) {
+                        this.currentPagePresent = page;
+                    },
+                    presentParticipant() {
+                        let filtered = this.participants.filter(participant => participant.present);
+
+                        if (this.searchPresentQuery) {
+                            const searchLower = this.searchPresentQuery.toLowerCase();
+                            filtered = filtered.filter(participant =>
+                                participant.name.toLowerCase().includes(searchLower) ||
+                                participant.email.toLowerCase().includes(searchLower) ||
+                                participant.phone.toLowerCase().includes(searchLower)
+                            );
+                        }
+                        this.totalPresentParticipantPage = Math.ceil(filtered.length / 4);
+                        return filtered;
+                    },
+
+                    unPresentParticipant() {
+                        let filtered = this.participants.filter(participant => !participant.present);
+                        if (this.searchQuery) {
+                            const searchLower = this.searchQuery.toLowerCase();
+                            filtered = filtered.filter(participant =>
+                                participant.name.toLowerCase().includes(searchLower) ||
+                                participant.email.toLowerCase().includes(searchLower) ||
+                                participant.phone.toLowerCase().includes(searchLower)
+                            );
+                        }
+                        this.totalPages = Math.ceil(filtered.length / 10);
+                        return filtered;
+                    },
+                },
+                computed: {
+                    totalTshirt() {
+                        return this.shirts.reduce((sum, item) => sum + item.quantity, 0)
+                    },
+                    totalPresentParticipant() {
+                        return this.participants.filter(participant => participant.present).length;
+                    },
+
+
+                    paginatedParticipants() {
+                        const start = (this.currentPagePresent - 1) * 4;
+                        const end = start + 4;
+                        let participants = this.presentParticipant().slice(start, end);
+
+                        return participants;
+                    },
+                    unPresentPaginate() {
+                        const start = (this.currentPage - 1) * 11;
+                        const end = start + 11;
+                        this.totalPages = Math.ceil(this.unPresentParticipant.length / 4);
+                        let participants = this.unPresentParticipant().slice(start, end);
+                        return participants;
+                    }
+
+
+                }
+
+            }
+
+
+            Vue.createApp(app).mount('#app')
+        </script>
+</body>
+
+</html>
